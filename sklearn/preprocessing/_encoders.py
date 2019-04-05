@@ -1,7 +1,7 @@
 # Authors: Andreas Mueller <amueller@ais.uni-bonn.de>
 #          Joris Van den Bossche <jorisvandenbossche@gmail.com>
 # License: BSD 3 clause
-
+from collections import defaultdict
 import numbers
 import warnings
 
@@ -317,10 +317,11 @@ class OneHotEncoder(_BaseEncoder):
 
     def __init__(self, n_values=None, categorical_features=None,
                  categories=None, drop=None, sparse=True, dtype=np.float64,
-                 handle_unknown='error'):
+                 handle_missing=None, handle_unknown='error'):
         self.categories = categories
         self.sparse = sparse
         self.dtype = dtype
+        self.handle_missing = handle_missing
         self.handle_unknown = handle_unknown
         self.n_values = n_values
         self.categorical_features = categorical_features
@@ -466,6 +467,26 @@ class OneHotEncoder(_BaseEncoder):
                 "are deprecated, and cannot be used together "
                 "with 'drop'.")
 
+    def _handle_missing(self, X):
+        if self.handle_missing == 'mode':
+            for j in range(len(X[0])):
+                col_data = defaultdict(int)
+                for i in range(len(X)):
+                    val = X[i][j]
+                    col_data[val] += 1
+                col_mode = max(col_data, key=col_data.get)
+                for i in range(len(X)):
+                    if X[i][j] != X[i][j]:
+                        X[i][j] = col_mode
+
+        else:
+            for i in range(len(X)):
+                for j in range(len(X[0])):
+                    if X[i][j] != X[i][j]:
+                        X[i][j] = self.handle_missing
+
+        return X
+
     def fit(self, X, y=None):
         """Fit OneHotEncoder to X.
 
@@ -482,6 +503,9 @@ class OneHotEncoder(_BaseEncoder):
         self._validate_keywords()
 
         self._handle_deprecations(X)
+
+        if self.handle_missing:
+            X = self._handle_missing(X)
 
         if self._legacy_mode:
             _transform_selected(X, self._legacy_fit_transform, self.dtype,
@@ -675,6 +699,9 @@ class OneHotEncoder(_BaseEncoder):
 
     def _transform_new(self, X):
         """New implementation assuming categorical input"""
+        if self.handle_missing:
+            X = self._handle_missing(X)
+
         # validation of X happens in _check_X called by _transform
         X_int, X_mask = self._transform(X, handle_unknown=self.handle_unknown)
 
