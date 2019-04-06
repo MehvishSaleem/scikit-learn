@@ -839,3 +839,18 @@ def test_categories(density, drop):
             assert cat_list[drop_idx] == drop_cat
     assert isinstance(ohe_test.drop_idx_, np.ndarray)
     assert ohe_test.drop_idx_.dtype == np.int_
+
+
+@pytest.mark.parametrize('values, missing_value, handle_missing, expected', [
+    ([['Male'], ['Female'], ['Male'], [np.nan]], None, "mode", np.array([[0, 1], [1, 0], [0, 1], [0, 1]])),
+    ([['Male'], ['Female'], [np.nan]], "0", "value", np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]))
+
+])
+
+def test_one_hot_encoder_handle_missing(values, handle_missing, expected, missing_value):
+    enc = OneHotEncoder(handle_missing=handle_missing, missing_value=missing_value)
+    result = enc.fit_transform(values).toarray()
+    assert_array_equal(expected, result)
+
+
+

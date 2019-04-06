@@ -202,6 +202,15 @@ class OneHotEncoder(_BaseEncoder):
         will be all zeros. In the inverse transform, an unknown category
         will be denoted as None.
 
+    handle_missing : 'mode' or 'value' or 'None', default='None'.
+        Incase of the default value, it raises an error when a missing value (nan)
+        is encountered. In order to handle the missing value, this parameter can either
+        be set to 'mode' and it replaces the missing value with the most frequent value in the
+        column or it can be set to 'value' and a separate category would be created.
+
+    missing_value : the value to replace the missing value with when "handle_missing"
+        is set to "value".
+
     n_values : 'auto', int or array of ints, default='auto'
         Number of values per feature.
 
@@ -317,11 +326,12 @@ class OneHotEncoder(_BaseEncoder):
 
     def __init__(self, n_values=None, categorical_features=None,
                  categories=None, drop=None, sparse=True, dtype=np.float64,
-                 handle_missing=None, handle_unknown='error'):
+                 handle_missing=None, missing_value=None, handle_unknown='error'):
         self.categories = categories
         self.sparse = sparse
         self.dtype = dtype
         self.handle_missing = handle_missing
+        self.missing_value = missing_value
         self.handle_unknown = handle_unknown
         self.n_values = n_values
         self.categorical_features = categorical_features
@@ -467,7 +477,23 @@ class OneHotEncoder(_BaseEncoder):
                 "are deprecated, and cannot be used together "
                 "with 'drop'.")
 
+
     def _handle_missing(self, X):
+
+        '''
+        Handles the missing values in X.
+
+        Parameters
+        ----------
+        X : array-like, shape [n_samples, n_features]
+            The input data.
+
+        Returns
+        -------
+        X with missing values replaced by either "mode" or a new category.
+
+        '''
+
         if self.handle_missing == 'mode':
             for j in range(len(X[0])):
                 col_data = defaultdict(int)
@@ -483,7 +509,7 @@ class OneHotEncoder(_BaseEncoder):
             for i in range(len(X)):
                 for j in range(len(X[0])):
                     if X[i][j] != X[i][j]:
-                        X[i][j] = self.handle_missing
+                        X[i][j] = self.missing_value
 
         return X
 
